@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -52,6 +53,22 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				aura: {
+					purple: '#9b87f5',
+					'deep-purple': '#7E69AB',
+					blue: '#33C3F0',
+					green: '#4CAF50',
+					amber: '#FFC107',
+					red: '#FF5252',
+					gray: '#9E9E9E',
+				},
+				leave: {
+					local: '#8B5CF6',  // Purple
+					sick: '#EF4444',   // Red
+					halfLocal: '#A78BFA', // Light purple
+					halfSick: '#F87171', // Light red
+					vacation: '#3B82F6', // Blue
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
@@ -68,28 +85,40 @@ export default {
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'
 			},
+			boxShadow: {
+				'neu-light': '10px 10px 20px #d1d9e6, -10px -10px 20px #ffffff',
+				'neu-dark': '5px 5px 10px #151515, -5px -5px 10px #333333',
+				'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
+			},
 			keyframes: {
 				'accordion-down': {
-					from: {
-						height: '0'
-					},
-					to: {
-						height: 'var(--radix-accordion-content-height)'
-					}
+					from: { height: '0' },
+					to: { height: 'var(--radix-accordion-content-height)' },
 				},
 				'accordion-up': {
-					from: {
-						height: 'var(--radix-accordion-content-height)'
-					},
-					to: {
-						height: '0'
-					}
-				}
+					from: { height: 'var(--radix-accordion-content-height)' },
+					to: { height: '0' },
+				},
+				'fade-in': {
+					'0%': { opacity: '0', transform: 'translateY(10px)' },
+					'100%': { opacity: '1', transform: 'translateY(0)' },
+				},
+				'slide-in': {
+					'0%': { transform: 'translateX(-20px)', opacity: '0' },
+					'100%': { transform: 'translateX(0)', opacity: '1' },
+				},
+				'pulse-slow': {
+					'0%, 100%': { opacity: '1' },
+					'50%': { opacity: '0.8' },
+				},
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
-			}
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'fade-in': 'fade-in 0.3s ease-out',
+				'slide-in': 'slide-in 0.3s ease-out',
+				'pulse-slow': 'pulse-slow 3s infinite ease-in-out',
+			},
 		}
 	},
 	plugins: [require("tailwindcss-animate")],
