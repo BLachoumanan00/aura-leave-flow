@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -13,16 +12,23 @@ import { Search } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import LeaveCard from "@/components/leave/LeaveCard";
 import LeaveDetails from "@/components/leave/LeaveDetails";
+import LeaveForm from "@/components/leave/LeaveForm";
 import { LeaveType } from "@/components/leave/LeaveTypeBadge";
 import { Leave } from "@/types/leave";
-import { getLeaves } from "@/lib/storage";
+import { getLeaves, deleteLeave, updateLeave } from "@/lib/storage";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { toast } from "sonner";
 
 export default function LeaveLogs() {
   const [leaves, setLeaves] = useState<Leave[]>([]);
   const [filteredLeaves, setFilteredLeaves] = useState<Leave[]>([]);
   const [selectedLeave, setSelectedLeave] = useState<Leave | null>(null);
+  const [editingLeave, setEditingLeave] = useState<Leave | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<LeaveType | "all">("all");
+  const isMobile = useIsMobile();
+  const [showEditSheet, setShowEditSheet] = useState(false);
   
   useEffect(() => {
     const fetchedLeaves = getLeaves();
@@ -53,6 +59,34 @@ export default function LeaveLogs() {
   
   const handleViewLeave = (leave: Leave) => {
     setSelectedLeave(leave);
+  };
+  
+  const handleEditLeave = (leave: Leave) => {
+    setSelectedLeave(null);
+    setEditingLeave(leave);
+    
+    if (isMobile) {
+      setShowEditSheet(true);
+    } else {
+      // Keep dialog open but switch to edit mode
+      setSelectedLeave(null);
+      setTimeout(() => setEditingLeave(leave), 100);
+    }
+  };
+  
+  const handleDeleteLeave = (id: string) => {
+    const updatedLeaves = deleteLeave(id);
+    setLeaves(updatedLeaves);
+    setSelectedLeave(null);
+    toast.success("Leave deleted successfully");
+  };
+  
+  const handleSubmitEdit = (leave: Leave) => {
+    const updatedLeaves = updateLeave(leave);
+    setLeaves(updatedLeaves);
+    setEditingLeave(null);
+    setShowEditSheet(false);
+    toast.success("Leave updated successfully");
   };
   
   return (
@@ -123,11 +157,45 @@ export default function LeaveLogs() {
           {selectedLeave && (
             <LeaveDetails 
               leave={selectedLeave} 
-              onClose={() => setSelectedLeave(null)} 
+              onClose={() => setSelectedLeave(null)}
+              onEdit={handleEditLeave}
+              onDelete={handleDeleteLeave}
             />
           )}
         </DialogContent>
       </Dialog>
+      
+      <Dialog 
+        open={editingLeave !== null && !isMobile} 
+        onOpenChange={(open) => !open && setEditingLeave(null)}
+      >
+        <DialogContent className="sm:max-w-[600px]">
+          <h2 className="text-xl font-semibold mb-4">Edit Leave</h2>
+          {editingLeave && (
+            <LeaveForm 
+              initialValues={editingLeave}
+              onSubmit={handleSubmitEdit}
+              onCancel={() => setEditingLeave(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      <Sheet open={showEditSheet} onOpenChange={setShowEditSheet}>
+        <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl pt-6">
+          <h2 className="text-xl font-semibold mb-4">Edit Leave</h2>
+          {editingLeave && (
+            <LeaveForm 
+              initialValues={editingLeave}
+              onSubmit={handleSubmitEdit}
+              onCancel={() => {
+                setShowEditSheet(false);
+                setEditingLeave(null);
+              }}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
     </AppLayout>
   );
 }

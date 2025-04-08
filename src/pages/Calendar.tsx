@@ -9,30 +9,48 @@ import LeaveForm from "@/components/leave/LeaveForm";
 import LeaveDetails from "@/components/leave/LeaveDetails";
 import MobileCalendar from "@/components/calendar/MobileCalendar";
 import { Leave } from "@/types/leave";
-import { getLeaves, addLeave } from "@/lib/storage";
+import { getLeaves, addLeave, updateLeave, deleteLeave } from "@/lib/storage";
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { useLocation, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export default function Calendar() {
   const [leaves, setLeaves] = useState<Leave[]>([]);
   const [isAddLeaveOpen, setIsAddLeaveOpen] = useState(false);
   const [selectedLeave, setSelectedLeave] = useState<Leave | null>(null);
+  const [editingLeave, setEditingLeave] = useState<Leave | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const isMobile = useIsMobile();
+  const location = useLocation();
+  const navigate = useNavigate();
   
   // For mobile-specific sheet display
   const [showMobileSheet, setShowMobileSheet] = useState(false);
   
   useEffect(() => {
     setLeaves(getLeaves());
-  }, []);
+    
+    // Check if there's an editLeave in the location state
+    if (location.state?.editLeave) {
+      setEditingLeave(location.state.editLeave);
+      if (isMobile) {
+        setShowMobileSheet(true);
+      } else {
+        setIsAddLeaveOpen(true);
+      }
+      // Clear the location state
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location, navigate, isMobile]);
   
   const handleAddLeave = () => {
+    setEditingLeave(null); // Ensure we're not in edit mode
     if (isMobile) {
       setShowMobileSheet(true);
     } else {
@@ -41,10 +59,40 @@ export default function Calendar() {
   };
   
   const handleSubmitLeave = (leave: Leave) => {
-    const updatedLeaves = addLeave(leave);
+    let updatedLeaves;
+    
+    if (editingLeave) {
+      // We're editing an existing leave
+      updatedLeaves = updateLeave(leave);
+      toast.success("Leave updated successfully");
+    } else {
+      // We're adding a new leave
+      updatedLeaves = addLeave(leave);
+      toast.success("Leave request submitted");
+    }
+    
     setLeaves(updatedLeaves);
     setIsAddLeaveOpen(false);
     setShowMobileSheet(false);
+    setEditingLeave(null);
+  };
+  
+  const handleEditLeave = (leave: Leave) => {
+    setSelectedLeave(null); // Close details dialog
+    setEditingLeave(leave);
+    
+    if (isMobile) {
+      setShowMobileSheet(true);
+    } else {
+      setIsAddLeaveOpen(true);
+    }
+  };
+  
+  const handleDeleteLeave = (id: string) => {
+    const updatedLeaves = deleteLeave(id);
+    setLeaves(updatedLeaves);
+    setSelectedLeave(null);
+    toast.success("Leave deleted successfully");
   };
   
   const handleDayClick = (date: Date) => {
@@ -138,24 +186,36 @@ export default function Calendar() {
         </Tabs>
       )}
       
-      {/* Add Leave Dialog (Desktop) */}
+      {/* Add/Edit Leave Dialog (Desktop) */}
       <Dialog open={isAddLeaveOpen} onOpenChange={setIsAddLeaveOpen}>
         <DialogContent className="sm:max-w-[600px]">
-          <h2 className="text-xl font-semibold mb-4">Request New Leave</h2>
+          <h2 className="text-xl font-semibold mb-4">
+            {editingLeave ? "Edit Leave" : "Request New Leave"}
+          </h2>
           <LeaveForm 
             onSubmit={handleSubmitLeave} 
-            onCancel={() => setIsAddLeaveOpen(false)} 
+            onCancel={() => {
+              setIsAddLeaveOpen(false);
+              setEditingLeave(null);
+            }} 
+            initialValues={editingLeave}
           />
         </DialogContent>
       </Dialog>
       
-      {/* Add Leave Sheet (Mobile) */}
+      {/* Add/Edit Leave Sheet (Mobile) */}
       <Sheet open={showMobileSheet} onOpenChange={setShowMobileSheet}>
         <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl pt-6">
-          <h2 className="text-xl font-semibold mb-4">Request New Leave</h2>
+          <h2 className="text-xl font-semibold mb-4">
+            {editingLeave ? "Edit Leave" : "Request New Leave"}
+          </h2>
           <LeaveForm 
             onSubmit={handleSubmitLeave} 
-            onCancel={() => setShowMobileSheet(false)} 
+            onCancel={() => {
+              setShowMobileSheet(false);
+              setEditingLeave(null);
+            }}
+            initialValues={editingLeave}
           />
         </SheetContent>
       </Sheet>
@@ -170,7 +230,9 @@ export default function Calendar() {
           {selectedLeave && (
             <LeaveDetails 
               leave={selectedLeave} 
-              onClose={() => setSelectedLeave(null)} 
+              onClose={() => setSelectedLeave(null)}
+              onEdit={handleEditLeave}
+              onDelete={handleDeleteLeave}
             />
           )}
         </DialogContent>

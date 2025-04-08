@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { CalendarIcon, PaperclipIcon, MicIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,16 +28,33 @@ import { useIsMobile } from "@/hooks/use-mobile";
 interface LeaveFormProps {
   onSubmit: (leave: Leave) => void;
   onCancel: () => void;
+  initialValues?: Leave | null;
 }
 
-export default function LeaveForm({ onSubmit, onCancel }: LeaveFormProps) {
+export default function LeaveForm({ onSubmit, onCancel, initialValues }: LeaveFormProps) {
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const [leaveType, setLeaveType] = useState<LeaveType>("local");
   const [reason, setReason] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
+  const [attachmentName, setAttachmentName] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [leaveId, setLeaveId] = useState<string>("");
+  const [createdAt, setCreatedAt] = useState<Date>(new Date());
   const isMobile = useIsMobile();
+  
+  // Initialize form with initialValues if provided (for editing)
+  useEffect(() => {
+    if (initialValues) {
+      setStartDate(initialValues.startDate);
+      setEndDate(initialValues.endDate);
+      setLeaveType(initialValues.type);
+      setReason(initialValues.reason || "");
+      setAttachmentName(initialValues.attachmentName);
+      setLeaveId(initialValues.id);
+      setCreatedAt(initialValues.createdAt);
+    }
+  }, [initialValues]);
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,22 +70,23 @@ export default function LeaveForm({ onSubmit, onCancel }: LeaveFormProps) {
     }
     
     const newLeave: Leave = {
-      id: Date.now().toString(),
+      id: initialValues ? leaveId : Date.now().toString(),
       startDate,
       endDate,
       type: leaveType,
       reason,
-      attachmentName: attachment ? attachment.name : null,
-      createdAt: new Date(),
+      attachmentName: attachment ? attachment.name : attachmentName,
+      createdAt: initialValues ? createdAt : new Date(),
     };
     
     onSubmit(newLeave);
-    toast.success("Leave request submitted");
+    toast.success(initialValues ? "Leave updated successfully" : "Leave request submitted");
   };
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setAttachment(e.target.files[0]);
+      setAttachmentName(e.target.files[0].name);
     }
   };
   
@@ -202,16 +220,21 @@ export default function LeaveForm({ onSubmit, onCancel }: LeaveFormProps) {
             <PaperclipIcon className="h-4 w-4" />
             {attachment ? (
               <span className="truncate max-w-[150px]">{attachment.name}</span>
+            ) : attachmentName ? (
+              <span className="truncate max-w-[150px]">{attachmentName}</span>
             ) : (
               "Upload file"
             )}
           </Button>
-          {attachment && (
+          {(attachment || attachmentName) && (
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => setAttachment(null)}
+              onClick={() => {
+                setAttachment(null);
+                setAttachmentName(null);
+              }}
             >
               Remove
             </Button>
@@ -226,7 +249,7 @@ export default function LeaveForm({ onSubmit, onCancel }: LeaveFormProps) {
         </div>
         
         {/* File capture for mobile devices */}
-        {isMobile && !attachment && (
+        {isMobile && !attachment && !attachmentName && (
           <div className="flex gap-2 mt-2">
             <Button
               type="button"
@@ -241,6 +264,7 @@ export default function LeaveForm({ onSubmit, onCancel }: LeaveFormProps) {
                   const target = e.target as HTMLInputElement;
                   if (target.files && target.files[0]) {
                     setAttachment(target.files[0]);
+                    setAttachmentName(target.files[0].name);
                   }
                 };
                 input.click();
@@ -272,7 +296,9 @@ export default function LeaveForm({ onSubmit, onCancel }: LeaveFormProps) {
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" className={isMobile ? "flex-1" : ""}>Submit Leave Request</Button>
+        <Button type="submit" className={isMobile ? "flex-1" : ""}>
+          {initialValues ? "Update Leave" : "Submit Leave Request"}
+        </Button>
       </div>
     </form>
   );
