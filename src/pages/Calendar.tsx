@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import AppLayout from "@/components/layout/AppLayout";
 import LeaveCalendar from "@/components/calendar/LeaveCalendar";
+import WeekView from "@/components/calendar/WeekView";
+import DayView from "@/components/calendar/DayView";
 import LeaveForm from "@/components/leave/LeaveForm";
 import LeaveDetails from "@/components/leave/LeaveDetails";
 import MobileCalendar from "@/components/calendar/MobileCalendar";
@@ -20,6 +22,7 @@ export default function Calendar() {
   const [isAddLeaveOpen, setIsAddLeaveOpen] = useState(false);
   const [selectedLeave, setSelectedLeave] = useState<Leave | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [currentDate, setCurrentDate] = useState(new Date());
   const isMobile = useIsMobile();
   
   // For mobile-specific sheet display
@@ -61,6 +64,10 @@ export default function Calendar() {
       // Show date details with multiple leaves
       setSelectedDate(date);
     }
+  };
+  
+  const handleLeaveClick = (leave: Leave) => {
+    setSelectedLeave(leave);
   };
   
   return (
@@ -112,15 +119,21 @@ export default function Calendar() {
           </TabsContent>
           
           <TabsContent value="week" className="mt-0">
-            <div className="h-96 flex items-center justify-center bg-card rounded-xl">
-              <p className="text-muted-foreground">Week view coming soon</p>
-            </div>
+            <WeekView 
+              leaves={leaves}
+              currentDate={currentDate}
+              onDateChange={setCurrentDate}
+              onDayClick={handleDayClick}
+            />
           </TabsContent>
           
           <TabsContent value="day" className="mt-0">
-            <div className="h-96 flex items-center justify-center bg-card rounded-xl">
-              <p className="text-muted-foreground">Day view coming soon</p>
-            </div>
+            <DayView 
+              leaves={leaves}
+              currentDate={currentDate}
+              onDateChange={setCurrentDate}
+              onLeaveClick={handleLeaveClick}
+            />
           </TabsContent>
         </Tabs>
       )}
