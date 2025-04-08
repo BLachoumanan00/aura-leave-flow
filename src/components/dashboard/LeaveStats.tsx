@@ -2,6 +2,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { getLeaveQuotas } from "@/lib/quotaStorage";
+import { useEffect, useState } from "react";
+import { LeaveQuota } from "@/types/leaveQuota";
 
 type StatItem = {
   label: string;
@@ -11,11 +14,23 @@ type StatItem = {
 };
 
 export default function LeaveStats() {
-  const stats: StatItem[] = [
-    { label: "Local Leave", used: 5, total: 12, color: "bg-leave-local" },
-    { label: "Sick Leave", used: 2, total: 10, color: "bg-leave-sick" },
-    { label: "Vacation", used: 8, total: 15, color: "bg-leave-vacation" },
-  ];
+  const [quotas, setQuotas] = useState<LeaveQuota[]>([]);
+  
+  useEffect(() => {
+    setQuotas(getLeaveQuotas());
+  }, []);
+  
+  // Map quotas to stat items
+  const getDisplayName = (type: string): string => {
+    switch (type) {
+      case "local": return "Local Leave";
+      case "sick": return "Sick Leave";
+      case "vacation": return "Vacation";
+      case "halfLocal": return "½ Local Leave";
+      case "halfSick": return "½ Sick Leave";
+      default: return type;
+    }
+  };
   
   return (
     <Card>
@@ -25,24 +40,24 @@ export default function LeaveStats() {
       
       <CardContent>
         <div className="space-y-4">
-          {stats.map((stat) => (
-            <div key={stat.label} className="space-y-1">
+          {quotas.map((quota) => (
+            <div key={quota.type} className="space-y-1">
               <div className="flex justify-between text-sm mb-1">
-                <span>{stat.label}</span>
+                <span>{getDisplayName(quota.type)}</span>
                 <span className="font-medium">
-                  {stat.used} / {stat.total} days
+                  {quota.used} / {quota.total} days
                 </span>
               </div>
               
               <div className="relative h-2 overflow-hidden rounded-full bg-secondary">
                 <div
-                  className={cn("h-full rounded-full", stat.color)}
-                  style={{ width: `${Math.min(100, (stat.used / stat.total) * 100)}%` }}
+                  className={cn(`h-full rounded-full bg-leave-${quota.type}`)}
+                  style={{ width: `${Math.min(100, (quota.used / quota.total) * 100)}%` }}
                 />
               </div>
               
               <div className="text-xs text-muted-foreground text-right">
-                {stat.total - stat.used} days remaining
+                {quota.total - quota.used} days remaining
               </div>
             </div>
           ))}

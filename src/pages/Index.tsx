@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import AppLayout from "@/components/layout/AppLayout";
-import LeaveStats from "@/components/dashboard/LeaveStats";
 import InsightsCard from "@/components/dashboard/InsightsCard";
 import RecentActivity from "@/components/dashboard/RecentActivity";
 import LeaveForm from "@/components/leave/LeaveForm";
@@ -15,23 +14,44 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import EditableLeaveStats from "@/components/dashboard/EditableLeaveStats";
+import { LeaveQuota, calculateUsedLeaves } from "@/types/leaveQuota";
+import { getLeaveQuotas, updateLeaveQuotas } from "@/lib/quotaStorage";
 
 export default function Index() {
   const [isAddLeaveOpen, setIsAddLeaveOpen] = useState(false);
   const [showMobileSheet, setShowMobileSheet] = useState(false);
   const [leaves, setLeaves] = useState<Leave[]>([]);
+  const [leaveQuotas, setLeaveQuotas] = useState<LeaveQuota[]>([]);
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   
   useEffect(() => {
-    setLeaves(getLeaves());
+    const allLeaves = getLeaves();
+    setLeaves(allLeaves);
+    
+    // Get and update leave quotas
+    const quotas = getLeaveQuotas();
+    const updatedQuotas = calculateUsedLeaves(allLeaves, quotas);
+    setLeaveQuotas(updatedQuotas);
   }, []);
   
   const handleSubmitLeave = (leave: Leave) => {
-    addLeave(leave);
+    const updatedLeaves = addLeave(leave);
+    setLeaves(updatedLeaves);
+    
+    // Update quotas based on new leaves
+    const updatedQuotas = calculateUsedLeaves(updatedLeaves, leaveQuotas);
+    setLeaveQuotas(updatedQuotas);
+    updateLeaveQuotas(updatedQuotas);
+    
     setIsAddLeaveOpen(false);
     setShowMobileSheet(false);
-    setLeaves(getLeaves());
+  };
+  
+  const handleUpdateQuotas = (quotas: LeaveQuota[]) => {
+    setLeaveQuotas(quotas);
+    updateLeaveQuotas(quotas);
   };
   
   const handleAddLeave = () => {
@@ -57,8 +77,7 @@ export default function Index() {
     return (
       <>
         <div className="glass-card p-5 rounded-xl mb-6">
-          <h2 className="text-xl font-semibold mb-3">Leave Balance</h2>
-          <LeaveStats />
+          <EditableLeaveStats quotas={leaveQuotas} onUpdateQuotas={handleUpdateQuotas} />
         </div>
         
         <div className="grid grid-cols-2 gap-3 mb-6">
@@ -152,7 +171,7 @@ export default function Index() {
           </div>
           
           <div className="space-y-6">
-            <LeaveStats />
+            <EditableLeaveStats quotas={leaveQuotas} onUpdateQuotas={handleUpdateQuotas} />
             <InsightsCard />
           </div>
         </div>

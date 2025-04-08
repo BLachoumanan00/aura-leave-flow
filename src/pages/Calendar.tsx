@@ -13,11 +13,14 @@ import { getLeaves, addLeave, updateLeave, deleteLeave } from "@/lib/storage";
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, InfoIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { isPublicHoliday } from "@/utils/holidays";
+import { calculateUsedLeaves } from "@/types/leaveQuota";
+import { getLeaveQuotas, updateLeaveQuotas } from "@/lib/quotaStorage";
 
 export default function Calendar() {
   const [leaves, setLeaves] = useState<Leave[]>([]);
@@ -34,7 +37,13 @@ export default function Calendar() {
   const [showMobileSheet, setShowMobileSheet] = useState(false);
   
   useEffect(() => {
-    setLeaves(getLeaves());
+    const allLeaves = getLeaves();
+    setLeaves(allLeaves);
+    
+    // Update leave quotas whenever leaves change
+    const quotas = getLeaveQuotas();
+    const updatedQuotas = calculateUsedLeaves(allLeaves, quotas);
+    updateLeaveQuotas(updatedQuotas);
     
     // Check if there's an editLeave in the location state
     if (location.state?.editLeave) {
@@ -72,6 +81,12 @@ export default function Calendar() {
     }
     
     setLeaves(updatedLeaves);
+    
+    // Update leave quotas
+    const quotas = getLeaveQuotas();
+    const updatedQuotas = calculateUsedLeaves(updatedLeaves, quotas);
+    updateLeaveQuotas(updatedQuotas);
+    
     setIsAddLeaveOpen(false);
     setShowMobileSheet(false);
     setEditingLeave(null);
@@ -91,12 +106,25 @@ export default function Calendar() {
   const handleDeleteLeave = (id: string) => {
     const updatedLeaves = deleteLeave(id);
     setLeaves(updatedLeaves);
+    
+    // Update leave quotas
+    const quotas = getLeaveQuotas();
+    const updatedQuotas = calculateUsedLeaves(updatedLeaves, quotas);
+    updateLeaveQuotas(updatedQuotas);
+    
     setSelectedLeave(null);
     toast.success("Leave deleted successfully");
   };
   
   const handleDayClick = (date: Date) => {
     setSelectedDate(date);
+    
+    // Check if it's a public holiday
+    const holiday = isPublicHoliday(date);
+    
+    if (holiday.isHoliday) {
+      toast.info(`Public Holiday: ${holiday.holidayName}`);
+    }
     
     // Find leaves for this day
     const leavesForDay = leaves.filter(leave => {
@@ -248,6 +276,15 @@ export default function Calendar() {
             {selectedDate && format(selectedDate, "MMMM d, yyyy")}
           </h2>
           
+          {selectedDate && isPublicHoliday(selectedDate).isHoliday && (
+            <div className="mb-4 p-3 bg-purple-100 dark:bg-purple-900/20 rounded-md flex items-center gap-2">
+              <InfoIcon className="h-5 w-5 text-purple-700 dark:text-purple-300" />
+              <span className="text-purple-800 dark:text-purple-200 font-medium">
+                Public Holiday: {isPublicHoliday(selectedDate).holidayName}
+              </span>
+            </div>
+          )}
+          
           <div className="space-y-4">
             {selectedDate && 
               leaves
@@ -278,6 +315,22 @@ export default function Calendar() {
                     )}
                   </div>
                 ))
+            }
+            
+            {selectedDate && 
+              leaves.filter(leave => {
+                return selectedDate >= leave.startDate && selectedDate <= leave.endDate;
+              }).length === 0 && !isPublicHoliday(selectedDate).isHoliday && (
+                <div className="text-center py-4 text-sm text-muted-foreground">
+                  No leave records for this date.
+                  <div className="mt-2">
+                    <Button size="sm" onClick={handleAddLeave}>
+                      <PlusCircle className="h-3.5 w-3.5 mr-1.5" />
+                      Add Leave
+                    </Button>
+                  </div>
+                </div>
+              )
             }
           </div>
         </DialogContent>

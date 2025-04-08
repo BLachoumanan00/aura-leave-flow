@@ -5,6 +5,8 @@ import { ChevronLeft, ChevronRight, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Leave } from "@/types/leave";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { isPublicHoliday } from "@/utils/holidays";
 
 interface LeaveCalendarProps {
   leaves: Leave[];
@@ -31,6 +33,11 @@ export default function LeaveCalendar({ leaves, onAddLeave, onDayClick }: LeaveC
   
   const getDayClass = (day: Date) => {
     const dayLeaves = getLeavesForDay(day);
+    const holiday = isPublicHoliday(day);
+    
+    if (holiday.isHoliday) {
+      return "bg-purple-100 dark:bg-purple-900/20 border-purple-300 dark:border-purple-700";
+    }
     
     if (dayLeaves.length === 0) return "";
     
@@ -91,6 +98,7 @@ export default function LeaveCalendar({ leaves, onAddLeave, onDayClick }: LeaveC
         {daysInMonth.map((day) => {
           const dayLeaves = getLeavesForDay(day);
           const isToday = isSameDay(day, new Date());
+          const holiday = isPublicHoliday(day);
           
           return (
             <div
@@ -110,6 +118,21 @@ export default function LeaveCalendar({ leaves, onAddLeave, onDayClick }: LeaveC
                 )}>
                   {format(day, "d")}
                 </div>
+                
+                {holiday.isHoliday && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="text-xs px-1 py-0.5 mb-1 bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-200 rounded-sm truncate">
+                          Public Holiday
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{holiday.holidayName}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
                 
                 <div className="overflow-hidden">
                   {dayLeaves.slice(0, 2).map((leave, i) => (

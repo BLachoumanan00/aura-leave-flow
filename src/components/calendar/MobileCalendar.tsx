@@ -8,6 +8,7 @@ import { Leave } from "@/types/leave";
 import LeaveTypeBadge from "@/components/leave/LeaveTypeBadge";
 import { useTouchDevice } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { isPublicHoliday } from "@/utils/holidays";
 
 interface MobileCalendarProps {
   leaves: Leave[];
@@ -80,6 +81,7 @@ export default function MobileCalendar({ leaves, onDayClick }: MobileCalendarPro
             const dayLeaves = getLeavesForDay(day);
             const isCurrentDay = isSameDay(day, today);
             const hasLeave = dayLeaves.length > 0;
+            const holiday = isPublicHoliday(day);
             
             return (
               <div
@@ -88,6 +90,7 @@ export default function MobileCalendar({ leaves, onDayClick }: MobileCalendarPro
                   "h-11 rounded-full flex flex-col items-center justify-center relative",
                   isCurrentDay ? "font-bold" : "",
                   hasLeave ? `ring-2 ring-leave-${dayLeaves[0].type}/50` : "",
+                  holiday.isHoliday ? "ring-2 ring-purple-400/50" : "",
                   "active:bg-accent/30 transition-colors cursor-pointer",
                   isTouch ? "hover:bg-transparent" : "hover:bg-accent/20"
                 )}
@@ -96,18 +99,19 @@ export default function MobileCalendar({ leaves, onDayClick }: MobileCalendarPro
                 <span 
                   className={cn(
                     "size-7 flex items-center justify-center rounded-full",
-                    isCurrentDay ? "bg-primary text-primary-foreground" : ""
+                    isCurrentDay ? "bg-primary text-primary-foreground" : "",
+                    holiday.isHoliday && !isCurrentDay ? "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200" : ""
                   )}
                 >
                   {format(day, "d")}
                 </span>
                 
-                {hasLeave && (
+                {(hasLeave || holiday.isHoliday) && (
                   <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2">
                     <div 
                       className={cn(
                         "size-1.5 rounded-full",
-                        `bg-leave-${dayLeaves[0].type}`
+                        holiday.isHoliday ? "bg-purple-500" : `bg-leave-${dayLeaves[0].type}`
                       )} 
                     />
                   </div>
@@ -163,6 +167,46 @@ export default function MobileCalendar({ leaves, onDayClick }: MobileCalendarPro
         </div>
       </div>
       
+      {/* Public Holidays section */}
+      <div className="mt-4">
+        <h3 className="text-lg font-medium mb-3">Upcoming Public Holidays</h3>
+        
+        <div className="space-y-3">
+          {getMauritianHolidays()
+            .filter(holiday => holiday.date >= new Date())
+            .sort((a, b) => a.date.getTime() - b.date.getTime())
+            .slice(0, 3)
+            .map((holiday, index) => (
+              <Card 
+                key={`holiday-${index}`} 
+                className="p-3 cursor-pointer border-l-4 border-l-purple-500"
+                onClick={() => onDayClick(holiday.date)}
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200 text-xs rounded-full px-2 py-0.5">
+                        Holiday
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {format(holiday.date, "MMM d, yyyy")}
+                      </span>
+                    </div>
+                    
+                    <p className="text-sm mt-1.5 font-medium">{holiday.name}</p>
+                  </div>
+                </div>
+              </Card>
+            ))}
+            
+          {getMauritianHolidays().filter(holiday => holiday.date >= new Date()).length === 0 && (
+            <div className="text-center py-4 text-sm text-muted-foreground">
+              No upcoming public holidays.
+            </div>
+          )}
+        </div>
+      </div>
+      
       {/* Leave history section */}
       <div className="mt-4">
         <h3 className="text-lg font-medium mb-3">Recent Leave History</h3>
@@ -211,3 +255,6 @@ export default function MobileCalendar({ leaves, onDayClick }: MobileCalendarPro
     </div>
   );
 }
+
+// Import the getMauritianHolidays function at the top
+import { getMauritianHolidays } from "@/utils/holidays";
