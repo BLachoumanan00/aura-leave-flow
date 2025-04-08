@@ -9,4 +9,7 @@ export interface Leave {
   reason: string;
   attachmentName: string | null;
   createdAt: Date;
+  mood?: 'good' | 'neutral' | 'bad'; // Optional mood tracking
+  location?: string; // Optional location data
+  isSynced?: boolean; // For offline-first functionality
 }

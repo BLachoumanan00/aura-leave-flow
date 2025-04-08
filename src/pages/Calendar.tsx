@@ -5,29 +5,43 @@ import AppLayout from "@/components/layout/AppLayout";
 import LeaveCalendar from "@/components/calendar/LeaveCalendar";
 import LeaveForm from "@/components/leave/LeaveForm";
 import LeaveDetails from "@/components/leave/LeaveDetails";
+import MobileCalendar from "@/components/calendar/MobileCalendar";
 import { Leave } from "@/types/leave";
 import { getLeaves, addLeave } from "@/lib/storage";
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { PlusCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 export default function Calendar() {
   const [leaves, setLeaves] = useState<Leave[]>([]);
   const [isAddLeaveOpen, setIsAddLeaveOpen] = useState(false);
   const [selectedLeave, setSelectedLeave] = useState<Leave | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const isMobile = useIsMobile();
+  
+  // For mobile-specific sheet display
+  const [showMobileSheet, setShowMobileSheet] = useState(false);
   
   useEffect(() => {
     setLeaves(getLeaves());
   }, []);
   
   const handleAddLeave = () => {
-    setIsAddLeaveOpen(true);
+    if (isMobile) {
+      setShowMobileSheet(true);
+    } else {
+      setIsAddLeaveOpen(true);
+    }
   };
   
   const handleSubmitLeave = (leave: Leave) => {
     const updatedLeaves = addLeave(leave);
     setLeaves(updatedLeaves);
     setIsAddLeaveOpen(false);
+    setShowMobileSheet(false);
   };
   
   const handleDayClick = (date: Date) => {
@@ -51,44 +65,67 @@ export default function Calendar() {
   
   return (
     <AppLayout>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gradient">Calendar</h1>
-        <p className="text-muted-foreground mt-1">
+      <div className="mb-4 md:mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-gradient">Calendar</h1>
+        <p className="text-sm md:text-base text-muted-foreground mt-1">
           View and manage your leave schedule
         </p>
       </div>
       
-      <Tabs defaultValue="month" className="w-full">
-        <div className="flex justify-between items-center mb-4">
-          <TabsList>
-            <TabsTrigger value="month">Month</TabsTrigger>
-            <TabsTrigger value="week">Week</TabsTrigger>
-            <TabsTrigger value="day">Day</TabsTrigger>
-          </TabsList>
-        </div>
-        
-        <TabsContent value="month" className="mt-0">
-          <LeaveCalendar 
+      {isMobile ? (
+        <>
+          <MobileCalendar 
             leaves={leaves} 
-            onAddLeave={handleAddLeave}
             onDayClick={handleDayClick}
           />
-        </TabsContent>
-        
-        <TabsContent value="week" className="mt-0">
-          <div className="h-96 flex items-center justify-center bg-card rounded-xl">
-            <p className="text-muted-foreground">Week view coming soon</p>
+          
+          {/* Floating Action Button for mobile */}
+          <Button 
+            onClick={handleAddLeave} 
+            className="fixed right-4 bottom-20 rounded-full h-14 w-14 shadow-lg"
+            size="icon"
+          >
+            <PlusCircle className="h-6 w-6" />
+          </Button>
+        </>
+      ) : (
+        <Tabs defaultValue="month" className="w-full">
+          <div className="flex justify-between items-center mb-4">
+            <TabsList>
+              <TabsTrigger value="month">Month</TabsTrigger>
+              <TabsTrigger value="week">Week</TabsTrigger>
+              <TabsTrigger value="day">Day</TabsTrigger>
+            </TabsList>
+            
+            <Button onClick={handleAddLeave}>
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Add Leave
+            </Button>
           </div>
-        </TabsContent>
-        
-        <TabsContent value="day" className="mt-0">
-          <div className="h-96 flex items-center justify-center bg-card rounded-xl">
-            <p className="text-muted-foreground">Day view coming soon</p>
-          </div>
-        </TabsContent>
-      </Tabs>
+          
+          <TabsContent value="month" className="mt-0">
+            <LeaveCalendar 
+              leaves={leaves} 
+              onAddLeave={handleAddLeave}
+              onDayClick={handleDayClick}
+            />
+          </TabsContent>
+          
+          <TabsContent value="week" className="mt-0">
+            <div className="h-96 flex items-center justify-center bg-card rounded-xl">
+              <p className="text-muted-foreground">Week view coming soon</p>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="day" className="mt-0">
+            <div className="h-96 flex items-center justify-center bg-card rounded-xl">
+              <p className="text-muted-foreground">Day view coming soon</p>
+            </div>
+          </TabsContent>
+        </Tabs>
+      )}
       
-      {/* Add Leave Dialog */}
+      {/* Add Leave Dialog (Desktop) */}
       <Dialog open={isAddLeaveOpen} onOpenChange={setIsAddLeaveOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <h2 className="text-xl font-semibold mb-4">Request New Leave</h2>
@@ -98,6 +135,17 @@ export default function Calendar() {
           />
         </DialogContent>
       </Dialog>
+      
+      {/* Add Leave Sheet (Mobile) */}
+      <Sheet open={showMobileSheet} onOpenChange={setShowMobileSheet}>
+        <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl pt-6">
+          <h2 className="text-xl font-semibold mb-4">Request New Leave</h2>
+          <LeaveForm 
+            onSubmit={handleSubmitLeave} 
+            onCancel={() => setShowMobileSheet(false)} 
+          />
+        </SheetContent>
+      </Sheet>
       
       {/* Leave Details Dialog */}
       <Dialog 
